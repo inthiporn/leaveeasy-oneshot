@@ -60,7 +60,8 @@ function วาดNavUser(ผู้ใช้, บทบาท) {
 
   // querySelectorAll แทน querySelector ตัวเดียว — บางหน้า (เช่น index.html) มีลิงก์ไปหน้านี้
   // ซ้ำทั้งในแถบเมนูและในการ์ดเนื้อหา ถ้าใช้ querySelector จะซ่อนได้แค่อันแรกที่เจอ
-  document.querySelectorAll('a[href="leave-types.html"]').forEach(function (ลิงก์) {
+  // ทั้งสองหน้านี้เป็นงานของฝ่ายบุคคลเท่านั้น (จัดการประเภทการลา + แดชบอร์ดสรุปทั้งระบบ)
+  document.querySelectorAll('a[href="leave-types.html"], a[href="dashboard.html"]').forEach(function (ลิงก์) {
     ลิงก์.style.display = (ผู้ใช้ && บทบาท === "hr") ? "" : "none";
   });
 }
@@ -88,6 +89,8 @@ function สร้างข้อมูลผู้ใช้(ผู้ใช้,
 // หน้าที่ "บังคับ" ต้องล็อกอินก่อนถึงจะใช้งานได้
 // คืน Promise resolve เป็น {uid,email,displayName,role} ถ้าล็อกอินอยู่
 // ถ้ายังไม่ล็อกอิน จะสั่ง location.href = "login.html" ให้เอง
+// และคอยฟังต่อไปตลอดอายุของหน้า — ถ้าออกจากระบบระหว่างที่ยังเปิดหน้านี้ค้างไว้
+// (เช่น กดออกจากระบบจากแท็บอื่น) จะเด้งไป login.html ทันที ไม่ปล่อยให้ข้อมูลเก่าค้างจอ
 export async function ต้องล็อกอิน() {
   var ผู้ใช้ = await รอสถานะเริ่มต้น();
   if (!ผู้ใช้) {
@@ -95,6 +98,11 @@ export async function ต้องล็อกอิน() {
     return new Promise(function () {}); // ค้าง Promise ไว้เฉย ๆ ระหว่างที่หน้ากำลังเปลี่ยนเส้นทาง
   }
   var บทบาท = await อ่านบทบาท(ผู้ใช้.uid);
+
+  onAuthStateChanged(auth, function (ผู้ใช้ตอนนี้) {
+    if (!ผู้ใช้ตอนนี้) location.href = "login.html";
+  });
+
   return สร้างข้อมูลผู้ใช้(ผู้ใช้, บทบาท);
 }
 

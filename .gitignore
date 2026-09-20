@@ -21,6 +21,14 @@ desktop.ini
 .idea/
 
 
+# ── ไฟล์เฉพาะเครื่องมือ/เฉพาะเครื่องเรา ไม่ใช่ส่วนหนึ่งของงานที่ต้องส่ง ──
+.claude/
+.firebase/
+.mcp.json
+.playwright-mcp/
+*.png
+
+
 # ── ไฟล์ที่มีคีย์ลับ (เพิ่มในสัปดาห์ที่ 7) ──
 # js/openrouter.config.js เก็บคีย์ API ของ OpenRouter จริง ห้าม push ขึ้น GitHub เด็ดขาด
 # (js/openrouter.config.example.js ไม่มีคีย์จริง จึง push ได้ตามปกติ)

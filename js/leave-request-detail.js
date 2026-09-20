@@ -35,6 +35,11 @@ import {
     var สแนปช็อตความเห็น = await getDocs(collection(db, "leaveRequests", รหัสใบลา, "approvals"));
     ความเห็น = สแนปช็อตความเห็น.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
   } catch (err) {
+    // Security Rules ปฏิเสธตั้งแต่ระดับฐานข้อมูล (เช่น employee เปิดใบของคนอื่น) — ไม่ใช่ปัญหาการตั้งค่า
+    if (err.code === "permission-denied") {
+      กล่องใบลา.innerHTML = "<p>คุณไม่มีสิทธิ์ดูใบลานี้</p>";
+      return;
+    }
     showConfigWarning("อ่านข้อมูลจาก Firestore ไม่สำเร็จ (" + err.message + ")");
     กล่องใบลา.innerHTML = "<p>โหลดรายละเอียดใบลาไม่สำเร็จ</p>";
     return;
@@ -58,7 +63,7 @@ import {
       ["สถานะ", ป้ายสถานะ(ใบ.status)],
       ["วันที่ยื่น", esc(ใบ.createdAt)]
     ];
-    if (ใบ.aiSuggestion) แถว.push(["สรุปโดย AI", esc(ใบ.aiSuggestion)]);
+    if (ใบ.aiSuggestion) แถว.push(["🤖 สรุปจาก AI — โปรดตรวจสอบก่อนตัดสินใจ", esc(ใบ.aiSuggestion)]);
 
     var html = แถว.map(function (r) {
       return '<div class="field-row"><span class="k">' + r[0] + "</span><span>" + r[1] + "</span></div>";
@@ -121,7 +126,8 @@ import {
     }
   }
 
-  // ── ให้ AI ช่วยสรุปใบลา — เขียนเฉพาะช่อง aiSuggestion ห้ามแตะ status ──
+  // ── ให้ AI ช่วยสรุปใบลา — แสดงบนหน้าจอให้หัวหน้าอ่านก่อนกดอนุมัติเท่านั้น
+  //    ไม่เขียนลง Firestore เพราะ leaveRequests มีช่องตามสเปกเท่านั้น (ไม่มีช่องสรุปของ AI) ──
   async function สรุปใบลา() {
     var ปุ่มสรุป = document.getElementById("ปุ่มสรุป");
     var ข้อความปุ่มเดิม = ปุ่มสรุป.textContent;
@@ -138,13 +144,7 @@ import {
         "เหตุผล: " + ใบ.reason;
 
       var สรุป = (await เรียกAI(คำถาม)).trim();
-      await updateDoc(เอกสารใบลา, { aiSuggestion: สรุป });   // ส่งแค่ฟิลด์ aiSuggestion ฟิลด์เดียว
-      await addDoc(collection(db, "leaveRequests", รหัสใบลา, "aiLog"), {
-        input: คำถาม,
-        output: สรุป,
-        createdAt: เวลาตอนนี้()
-      });
-      ใบ.aiSuggestion = สรุป;
+      ใบ.aiSuggestion = สรุป;   // เก็บไว้ในหน่วยความจำของหน้านี้เท่านั้น
       วาดใบลา();
     } catch (err) {
       alert("สรุปใบลาไม่สำเร็จ (" + err.message + ")");
@@ -183,10 +183,11 @@ import {
       }).join("");
   }
 
-  // ── ส่งความเห็นใหม่ (สัปดาห์นี้เก็บในหน่วยความจำอย่างเดียว ยังไม่เขียน Firestore) ──
-  function ส่งความเห็น() {
+  // ── ส่งความเห็นใหม่ — บันทึกลงโฟลเดอร์ย่อย approvals ของใบนี้จริง (US-05) ──
+  async function ส่งความเห็น() {
     var ช่อง = document.getElementById("ข้อความความเห็น");
     var เตือน = document.getElementById("เตือนความเห็น");
+    var ปุ่มส่ง = document.getElementById("ปุ่มส่งความเห็น");
     var ข้อความ = ช่อง.value.trim();
 
     if (!ข้อความ) {
@@ -196,14 +197,28 @@ import {
     }
     เตือน.classList.add("hidden");
 
-    ความเห็น.push({
-      id: "ap-ใหม่-" + Date.now(),
-      requestId: ใบ.id,
-      authorId: ผู้ใช้.uid, authorName: ผู้ใช้.displayName || ผู้ใช้.email,
+    var ความเห็นใหม่ = {
+      authorId: ผู้ใช้.uid,
+      authorName: ผู้ใช้.displayName || ผู้ใช้.email,
       message: ข้อความ,
       createdAt: เวลาตอนนี้()
-    });
-    ช่อง.value = "";
-    วาดความเห็น();
+    };
+
+    var ข้อความปุ่มเดิม = ปุ่มส่ง.textContent;
+    ปุ่มส่ง.disabled = true;
+    ปุ่มส่ง.textContent = "กำลังส่ง...";
+    try {
+      // โฟลเดอร์ย่อยของใบนี้เท่านั้น ไม่ใช่โฟลเดอร์กลาง
+      var เอกสารความเห็น = await addDoc(collection(db, "leaveRequests", รหัสใบลา, "approvals"), ความเห็นใหม่);
+      ความเห็น.push(Object.assign({ id: เอกสารความเห็น.id }, ความเห็นใหม่));
+      ช่อง.value = "";
+      วาดความเห็น();
+    } catch (err) {
+      เตือน.textContent = "⚠️ ส่งความเห็นไม่สำเร็จ (" + err.message + ")";
+      เตือน.classList.remove("hidden");
+    } finally {
+      ปุ่มส่ง.disabled = false;
+      ปุ่มส่ง.textContent = ข้อความปุ่มเดิม;
+    }
   }
 })();

@@ -1,0 +1,26 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/.*/**",
+      "**/node_modules/**",
+      "js/openrouter.config.js",
+      "js/openrouter.config.example.js",
+      "firestore.rules",
+      "leaveeasy-spec.md",
+      "CONTRACT.md",
+      "README.md",
+      "TEST-REPORT.md",
+      "SETUP.md",
+      "serve.ps1",
+      "package.json",
+      "package-lock.json",
+      "*.png"
+    ]
+  }
+}

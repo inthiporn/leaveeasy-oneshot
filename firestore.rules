@@ -1,13 +1,76 @@
 rules_version = '2';
 
-// กฎขั้นต่ำของสัปดาห์ 7: แค่ "ต้องล็อกอินก่อน ถึงอ่าน/เขียนได้"
-// ครอบทุก collection ในโปรเจกต์ (users, leaveTypes, leaveRequests)
-// รวมถึง subcollection ทุกระดับ (เช่น leaveRequests/{id}/approvals)
-// ยังไม่แยกสิทธิ์ตาม role (employee/manager/hr) หรือเจ้าของเอกสาร — เป็นงานสัปดาห์ถัดไป
+// กฎรายห้องของสัปดาห์ที่ 8 — แยกสิทธิ์ตาม role (employee/manager/hr) และเจ้าของเอกสารจริง
+// ครอบทุกโฟลเดอร์ (users, leaveTypes, leaveRequests) รวมโฟลเดอร์ย่อย approvals
+//
+// หมายเหตุ: ภาษาของกฎ (rules_version 2) รับเฉพาะชื่อฟังก์ชัน/ตัวแปรแบบ ASCII เท่านั้น
+// (ไม่เหมือน JavaScript ทั่วไปที่ตั้งชื่อภาษาไทยได้) จึงตั้งชื่อเป็นภาษาอังกฤษในไฟล์นี้ไฟล์เดียว
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // อ่าน role ของผู้ใช้ที่กำลังล็อกอิน จากโฟลเดอร์ users/{uid}
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isApproverOrHr() {
+      return myRole() in ["manager", "hr"];
+    }
+
+    // ── users/{uid} — โปรไฟล์ผู้ใช้ ──
+    match /users/{uid} {
+      // เห็นโปรไฟล์ตัวเองได้เสมอ · ผู้อนุมัติ/ฝ่ายบุคคลเห็นโปรไฟล์คนอื่นได้ด้วย (ต้องใช้ตอนแสดงชื่อ)
+      allow read: if isSignedIn() && (request.auth.uid == uid || isApproverOrHr());
+      // สมัครสมาชิกสร้างโปรไฟล์ตัวเองได้ครั้งเดียว บังคับ role เริ่มต้นเป็น employee เสมอ (กันสวมรอยตั้ง role ตัวเอง)
+      allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == "employee";
+      // เปลี่ยน role ทำผ่าน Firebase Console เท่านั้น ไม่เปิดให้แก้ผ่านแอป
+      allow update, delete: if false;
+    }
+
+    // ── leaveTypes/{id} — เฉพาะฝ่ายบุคคลเพิ่ม/แก้/ลบได้ ──
+    match /leaveTypes/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && myRole() == "hr";
+    }
+
+    // ── leaveRequests/{id} ──
+    match /leaveRequests/{id} {
+      // เจ้าของใบเห็นใบตัวเอง · ผู้อนุมัติ/ฝ่ายบุคคลเห็นได้ทุกใบ
+      allow read: if isSignedIn() &&
+        (resource.data.requesterId == request.auth.uid || isApproverOrHr());
+
+      // ยื่นใบใหม่ได้เฉพาะในนามตัวเอง และสถานะเริ่มต้นต้องเป็นรอพิจารณาเสมอ
+      allow create: if isSignedIn() &&
+        request.resource.data.requesterId == request.auth.uid &&
+        request.resource.data.status == "รอพิจารณา";
+
+      // เปลี่ยนสถานะได้เฉพาะผู้อนุมัติ/ฝ่ายบุคคล และแก้ได้เฉพาะช่อง status เท่านั้น (ห้ามแตะช่องอื่น)
+      allow update: if isSignedIn() && isApproverOrHr() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]);
+
+      // ลบได้เฉพาะเจ้าของใบเอง และใบต้องยังอยู่ในสถานะรอพิจารณาเท่านั้น
+      allow delete: if isSignedIn() &&
+        resource.data.requesterId == request.auth.uid &&
+        resource.data.status == "รอพิจารณา";
+
+      // ── leaveRequests/{id}/approvals/{approvalId} — ความเห็นการอนุมัติ ──
+      match /approvals/{approvalId} {
+        allow read: if isSignedIn() &&
+          (get(/databases/$(database)/documents/leaveRequests/$(id)).data.requesterId == request.auth.uid ||
+           isApproverOrHr());
+
+        // เขียนความเห็นได้เฉพาะเจ้าของใบ/ผู้อนุมัติ/ฝ่ายบุคคล และต้องระบุตัวเองเป็นผู้เขียนเท่านั้น (กันปลอมชื่อ)
+        allow create: if isSignedIn() &&
+          request.resource.data.authorId == request.auth.uid &&
+          (get(/databases/$(database)/documents/leaveRequests/$(id)).data.requesterId == request.auth.uid ||
+           isApproverOrHr());
+
+        allow update, delete: if false; // ความเห็นที่ส่งแล้วแก้/ลบไม่ได้ตามสเปก
+      }
     }
   }
 }

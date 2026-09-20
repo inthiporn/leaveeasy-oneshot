@@ -6,7 +6,7 @@
 
 import { ต้องล็อกอิน } from "./auth.js";
 import { db } from "./firebaseConfig.js";
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 import { เรียกAI } from "./openrouter.js";
 
 (async function () {
@@ -20,8 +20,20 @@ import { เรียกAI } from "./openrouter.js";
   var ปุ่มAI = document.getElementById("ปุ่มAI");
   var ป้ายข้อเสนอAI = document.getElementById("ป้ายข้อเสนอAI");
 
-  // เติมรายการเลื่อนลงด้วยประเภทการลาที่มีอยู่ (ยังใช้ js/data.js เป็นแหล่งชื่อประเภทการลา)
-  window.LEAVE_DATA.leaveTypes.forEach(function (ประเภท) {
+  // ประเภทการลาอ่านจากโฟลเดอร์ leaveTypes บน Firestore (US-02 สัปดาห์ที่ 7)
+  // ประเภทที่ฝ่ายบุคคลเพิ่มในหน้า จัดการประเภทการลา จึงมาโผล่ที่นี่ทันที
+  var ประเภทการลาทั้งหมด = [];
+  try {
+    var ผลประเภทการลา = await getDocs(collection(db, "leaveTypes"));
+    ประเภทการลาทั้งหมด = ผลประเภทการลา.docs.map(function (d) {
+      return { id: d.id, name: d.data().name };
+    });
+  } catch (err) {
+    เตือน("โหลดประเภทการลาจากฐานข้อมูลไม่สำเร็จ — " + (err && err.message ? err.message : "ลองใหม่อีกครั้ง"));
+  }
+
+  // เติมรายการเลื่อนลงด้วยประเภทการลาที่มีอยู่
+  ประเภทการลาทั้งหมด.forEach(function (ประเภท) {
     var ตัวเลือก = document.createElement("option");
     ตัวเลือก.value = ประเภท.id;
     ตัวเลือก.textContent = ประเภท.name;
@@ -42,7 +54,7 @@ import { เรียกAI } from "./openrouter.js";
     ปุ่มAI.textContent = "กำลังจัดประเภท...";
 
     try {
-      var รายชื่อประเภท = window.LEAVE_DATA.leaveTypes.map(function (t) { return t.name; });
+      var รายชื่อประเภท = ประเภทการลาทั้งหมด.map(function (t) { return t.name; });
       var คำตอบ = await เรียกAI(
         "เหตุผลการลา: " + เหตุผล,
         {
@@ -55,7 +67,7 @@ import { เรียกAI } from "./openrouter.js";
       );
 
       var ชื่อที่ตอบมา = (คำตอบ || "").trim();
-      var ประเภทที่ตรง = window.LEAVE_DATA.leaveTypes.find(function (t) { return t.name === ชื่อที่ตอบมา; });
+      var ประเภทที่ตรง = ประเภทการลาทั้งหมด.find(function (t) { return t.name === ชื่อที่ตอบมา; });
 
       if (ประเภทที่ตรง) {
         ช่องประเภท.value = ประเภทที่ตรง.id;
@@ -92,7 +104,7 @@ import { เรียกAI } from "./openrouter.js";
       return;
     }
 
-    var ประเภท = window.LEAVE_DATA.leaveTypes.find(function (t) { return t.id === ค่า.leaveTypeId; });
+    var ประเภท = ประเภทการลาทั้งหมด.find(function (t) { return t.id === ค่า.leaveTypeId; });
 
     var ข้อความปุ่มบันทึกเดิม = ปุ่มบันทึก.textContent;
     ปุ่มบันทึก.disabled = true;

@@ -33,10 +33,6 @@ import { collection, query, where, getDocs } from "https://www.gstatic.com/fireb
       return Object.assign({ id: doc.id }, doc.data());
     });
 
-    // รวมกับใบที่เพิ่งยื่นใน sessionStorage (สัปดาห์นี้ยังไม่ได้บันทึก Firestore)
-    var ใบลาที่ยื่นใหม่ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-    ใบลาทั้งหมด = ใบลาทั้งหมด.concat(ใบลาที่ยื่นใหม่);
-
     // ถ้ามีสถานะติดมาท้าย URL ให้กรองเฉพาะสถานะนั้น
     var สถานะที่กรอง = ค่าจากURL("status");
     if (สถานะที่กรอง) {
