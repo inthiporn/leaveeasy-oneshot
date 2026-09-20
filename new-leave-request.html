@@ -8,7 +8,7 @@
   <script src="js/util.js" defer></script>
   <script src="js/nav.js" defer></script>
   <script src="js/data.js" defer></script>
-  <script src="js/new-leave-request.js" defer></script>
+  <script type="module" src="js/new-leave-request.js"></script>
 </head>
 <body>
   <div id="nav"></div>
@@ -26,11 +26,16 @@
 
         <label for="reason">เหตุผลการลา</label>
         <textarea id="reason" placeholder="เล่าเหตุผลสั้น ๆ ให้หัวหน้าเข้าใจ"></textarea>
+        <p class="hint">เนื้อหาในช่องนี้จะถูกส่งไปให้ AI ที่ OpenRouter ช่วยประมวลผล — อย่ากรอกข้อมูลส่วนตัวจริง</p>
 
         <label for="leaveTypeId">ประเภทการลา</label>
         <select id="leaveTypeId">
           <option value="">— เลือกประเภทการลา —</option>
         </select>
+        <div class="btn-row">
+          <button type="button" id="ปุ่มAI" class="btn btn-ghost">ให้ AI ช่วยจัดประเภทการลา</button>
+        </div>
+        <p class="hint hidden" id="ป้ายข้อเสนอAI">🤖 ข้อเสนอจาก AI — โปรดตรวจสอบก่อนยืนยัน</p>
 
         <label for="startDate">วันที่เริ่มลา</label>
         <input type="date" id="startDate">

@@ -21,6 +21,12 @@ desktop.ini
 .idea/
 
 
+# ── ไฟล์ที่มีคีย์ลับ (เพิ่มในสัปดาห์ที่ 7) ──
+# js/openrouter.config.js เก็บคีย์ API ของ OpenRouter จริง ห้าม push ขึ้น GitHub เด็ดขาด
+# (js/openrouter.config.example.js ไม่มีคีย์จริง จึง push ได้ตามปกติ)
+js/openrouter.config.js
+
+
 # ─────────────────────────────────────────────────────────────
 # ✅ วิธีตรวจว่าใช้ได้จริง — ก่อน push ทุกครั้ง พิมพ์บอก Claude ว่า
 #

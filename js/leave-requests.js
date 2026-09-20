@@ -1,25 +1,56 @@
 // ─────────────────────────────────────────────────────────────
 // js/leave-requests.js — หน้าที่ 1 รายการใบลา
-// สัปดาห์ที่ 6 (ต้นสัปดาห์): อ่านจากข้อมูลปลอมใน js/data.js
+// สัปดาห์ที่ 7 (กลาง): อ่านจาก Firestore จริง
 // ─────────────────────────────────────────────────────────────
 
-(function () {
+import { ต้องล็อกอิน } from "./auth.js";
+import { db } from "./firebaseConfig.js";
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+(async function () {
   var กล่อง = document.getElementById("ผลลัพธ์");
 
-  // ใบลาจากข้อมูลปลอม บวกกับใบที่เพิ่งยื่นในหน้าถัดไป
-  // (สัปดาห์นี้ยังไม่ต่อฐานข้อมูล ใบที่ยื่นใหม่จึงหายเมื่อปิดเบราว์เซอร์)
-  var ใบลาที่ยื่นใหม่ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-  var ใบลาทั้งหมด = window.LEAVE_DATA.leaveRequests.concat(ใบลาที่ยื่นใหม่);
+  try {
+    // ล็อกอินก่อนอ่านข้อมูล — คืน {uid, role, ...}
+    var ผู้ใช้ = await ต้องล็อกอิน();
 
-  // ถ้ามีสถานะติดมาท้าย URL ให้กรองเฉพาะสถานะนั้น
-  var สถานะที่กรอง = ค่าจากURL("status");
-  if (สถานะที่กรอง) {
-    ใบลาทั้งหมด = ใบลาทั้งหมด.filter(function (ใบ) { return ใบ.status === สถานะที่กรอง; });
-    document.querySelector(".subtitle").textContent =
-      "กำลังแสดงเฉพาะใบลาที่สถานะ " + สถานะที่กรอง + " · กดเมนู รายการใบลา เพื่อดูทั้งหมด";
+    // สร้าง query ตาม role
+    var ตัวคิวรี;
+    if (ผู้ใช้.role === "employee") {
+      // ผู้ขอลา เห็นได้เฉพาะใบของตัวเอง
+      ตัวคิวรี = query(
+        collection(db, "leaveRequests"),
+        where("requesterId", "==", ผู้ใช้.uid)
+      );
+    } else {
+      // ผู้อนุมัติ / ฝ่ายบุคคล เห็นทั้งหมด
+      ตัวคิวรี = collection(db, "leaveRequests");
+    }
+
+    // อ่านจาก Firestore
+    var ผลลัพธ์ = await getDocs(ตัวคิวรี);
+    var ใบลาทั้งหมด = ผลลัพธ์.docs.map(function (doc) {
+      return Object.assign({ id: doc.id }, doc.data());
+    });
+
+    // รวมกับใบที่เพิ่งยื่นใน sessionStorage (สัปดาห์นี้ยังไม่ได้บันทึก Firestore)
+    var ใบลาที่ยื่นใหม่ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
+    ใบลาทั้งหมด = ใบลาทั้งหมด.concat(ใบลาที่ยื่นใหม่);
+
+    // ถ้ามีสถานะติดมาท้าย URL ให้กรองเฉพาะสถานะนั้น
+    var สถานะที่กรอง = ค่าจากURL("status");
+    if (สถานะที่กรอง) {
+      ใบลาทั้งหมด = ใบลาทั้งหมด.filter(function (ใบ) { return ใบ.status === สถานะที่กรอง; });
+      document.querySelector(".subtitle").textContent =
+        "กำลังแสดงเฉพาะใบลาที่สถานะ " + สถานะที่กรอง + " · กดเมนู รายการใบลา เพื่อดูทั้งหมด";
+    }
+
+    แสดงตาราง(ใบลาทั้งหมด);
+
+  } catch (ข้อผิดพลาด) {
+    console.error("ล้มเหลวในการอ่านใบลา:", ข้อผิดพลาด);
+    showConfigWarning("ไม่สามารถโหลดรายการใบลาได้: " + ข้อผิดพลาด.message);
   }
-
-  แสดงตาราง(ใบลาทั้งหมด);
 
   function แสดงตาราง(รายการ) {
     if (รายการ.length === 0) {

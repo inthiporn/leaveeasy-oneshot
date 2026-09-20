@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// กฎขั้นต่ำของสัปดาห์ 7: แค่ "ต้องล็อกอินก่อน ถึงอ่าน/เขียนได้"
+// ครอบทุก collection ในโปรเจกต์ (users, leaveTypes, leaveRequests)
+// รวมถึง subcollection ทุกระดับ (เช่น leaveRequests/{id}/approvals)
+// ยังไม่แยกสิทธิ์ตาม role (employee/manager/hr) หรือเจ้าของเอกสาร — เป็นงานสัปดาห์ถัดไป
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

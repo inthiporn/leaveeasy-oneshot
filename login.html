@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ · LeaveEasy</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container" style="max-width:420px">
+    <h1>🔧 LeaveEasy</h1>
+    <p class="subtitle">เข้าสู่ระบบเพื่อยื่นและพิจารณาใบขอลา</p>
+
+    <div class="card">
+      <div class="btn-row">
+        <button type="button" class="btn" id="แท็บเข้าสู่ระบบ">เข้าสู่ระบบ</button>
+        <button type="button" class="btn btn-ghost" id="แท็บสมัครสมาชิก">สมัครสมาชิก</button>
+      </div>
+
+      <div id="กล่องข้อความผิดพลาด" class="alert alert-error hidden"></div>
+
+      <form id="ฟอร์มเข้าสู่ระบบ">
+        <label for="อีเมลเข้าสู่ระบบ">อีเมล</label>
+        <input type="email" id="อีเมลเข้าสู่ระบบ" autocomplete="username" required>
+
+        <label for="รหัสผ่านเข้าสู่ระบบ">รหัสผ่าน</label>
+        <input type="password" id="รหัสผ่านเข้าสู่ระบบ" autocomplete="current-password" required>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-ok">เข้าสู่ระบบ</button>
+        </div>
+      </form>
+
+      <form id="ฟอร์มสมัครสมาชิก" class="hidden">
+        <label for="ชื่อสมัคร">ชื่อ-นามสกุล</label>
+        <input type="text" id="ชื่อสมัคร" autocomplete="name" required>
+
+        <label for="อีเมลสมัคร">อีเมล</label>
+        <input type="email" id="อีเมลสมัคร" autocomplete="username" required>
+
+        <label for="รหัสผ่านสมัคร">รหัสผ่าน</label>
+        <input type="password" id="รหัสผ่านสมัคร" autocomplete="new-password" minlength="6" required>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-ok">สมัครสมาชิก</button>
+        </div>
+        <p class="hint">สมัครแล้วบทบาทเริ่มต้นเป็น "พนักงาน" (employee) เสมอ</p>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>
